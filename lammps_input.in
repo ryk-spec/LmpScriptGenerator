@@ -1,0 +1,48 @@
+units           real
+dimension       3
+boundary        p p p
+newton          on
+atom_style      full
+bond_style      class2
+angle_style     class2
+dihedral_style  class2
+improper_style  class2
+special_bonds   lj/coul 0 0 1
+kspace_style    pppm 1.0e-4
+pair_style      lj/class2/coul/long 12.0
+pair_modify     mix sixthpower
+read_restart hoge.2.restart
+neighbor 2.0 bin
+neigh_modify delay 0 every 1 check yes
+compute myMass all reduce sum mass
+variable dens equal c_myMass/vol
+thermo 1000
+thermo_style custom step temp pe ke etotal press vol v_dens
+timestep 1.0
+fix 1 all nvt temp 100.0 300.0 100.0
+variable steps_per_ns equal 1000000
+variable rem equal 5000
+variable ns equal 0
+label loop_start
+if "${rem} >= ${steps_per_ns}" then "variable run_segment equal ${steps_per_ns}"
+if "${rem} < ${steps_per_ns}" then "variable run_segment equal ${rem}"
+run ${run_segment}
+write_restart hoge.1.restart
+variable ns equal ${ns}+1
+variable rem equal ${rem}-${run_segment}
+if "${rem} > 0" then "jump SELF loop_start"
+write_data hoge.1.data
+timestep 1.0
+fix 2 all npt temp 300.0 300.0 100.0 iso 0.0 0.0 1000.0
+variable steps_per_ns equal 1000000
+variable rem equal 5000
+variable ns equal 0
+label loop_start
+if "${rem} >= ${steps_per_ns}" then "variable run_segment equal ${steps_per_ns}"
+if "${rem} < ${steps_per_ns}" then "variable run_segment equal ${rem}"
+run ${run_segment}
+write_restart hoge.2.restart
+variable ns equal ${ns}+1
+variable rem equal ${rem}-${run_segment}
+if "${rem} > 0" then "jump SELF loop_start"
+write_data hoge.2.data
